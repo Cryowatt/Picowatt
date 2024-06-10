@@ -40,7 +40,7 @@ player.__index = player
 function player.new()
 	return setmetatable(
 		{
-			x = 24.2113,
+			x = 42.2113,
 			y = 68.934221,
 			dx = 0,
 			dy = 0,
@@ -104,10 +104,9 @@ function raycast(v)
 		-- printh("cast ray x:" .. ray.point.x .. " y:" .. ray.point.y .. " dx:" .. ray.magnitude.x .. " dy:" .. ray.magnitude.y .. " length:" .. length)
 		local dof = 0
 		while dof < max_length do
-			printh("cast iteration" .. dof .. " max_len:" .. max_length)
+			-- printh("cast iteration" .. dof .. " max_len:" .. max_length)
 			pset(x, y, 6)
 			if fget(mget(shr(x, 3), shr(y, 3)), tile_flag.solid) then
-				-- printh("HIT!")
 				-- hx = rx - x
 				-- hy = ry - y
 				-- distanceH = sqrt(hx * hx + hy * hy)
@@ -142,6 +141,8 @@ function raycast(v)
 		)
 
 		hhit = cast(ray, v.magnitude) or hhit
+		printh("Horizontal HIT!" .. tostr(hhit) .. "|" .. hhit:length())
+		circ(hhit.x, hhit.y, 3, 9)
 	end
 
 	--Check Vertical Lines
@@ -166,12 +167,20 @@ function raycast(v)
 		)
 
 		vhit = cast(ray, v.magnitude) or vhit
+		printh("Vertical HIT!" .. tostr(vhit) .. "|" .. vhit:length())
+		circ(hhit.x, hhit.y, 3, 10)
 	end
 
-	if hhit:length() < vhit:length() then
-		return vector.new(hhit, point.new(v.magnitude.x - hhit.magnitude.x, 0))
+	-- Move collision point to playerspace
+	local hdv = hhit - v.point
+	local vdv = vhit - v.point
+
+	if hdv:length() < vdv:length() then
+		dv = hhit - v.point
+		return vector.new(hhit, point.new(v.magnitude.x - dv.x, 0))
 	else
-		return vector.new(vhit, point.new(0, v.magnitude.y - vhit.magnitude.y))
+		dv = vhit - v.point
+		return vector.new(vhit, point.new(0, v.magnitude.y - dv.y))
 	end
 
 	-- if hhit ~= nil then
@@ -303,5 +312,6 @@ end
 
 function player:draw()
 	spr(2, self.x, self.y, 1, 1, self.h_flip)
-	spr(2, self.x + self.dx, self.y + self.dy, 1, 1, self.h_flip)
+	circ(self.x + self.dx, self.y + self.dy, 2, 14)
+	-- spr(2, self.x + self.dx, self.y + self.dy, 1, 1, self.h_flip)
 end
