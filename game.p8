@@ -8,8 +8,6 @@ tile_flag={
 
 #include player.lua
 
-p = player:new()
-
 function is_solid(x, y)
 	map_x = shr(x, 3)
 	map_y = shr(y, 3)
@@ -19,11 +17,14 @@ end
 
 function _init()
 	printh("RESET")
+	p = player.new()
 end
 
 function _update60()
 	cls()
 	map()
+	printh("update")
+	printh(p)
  p:update()
 end
 
