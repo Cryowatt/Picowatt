@@ -85,8 +85,9 @@ function raycast(v)
 	local y = v.point.y
 	local dx = v.magnitude.x
 	local dy = v.magnitude.y
-	local vhit = v.point + v.magnitude
 	local hhit = v.point + v.magnitude
+	local vhit = v.point + v.magnitude
+	circ(vhit.x, vhit.y, 1, time() * 30)
 	-- distanceH = length
 	-- distanceV = length
 	local hx = x + dx
@@ -112,7 +113,7 @@ function raycast(v)
 				-- distanceH = sqrt(hx * hx + hy * hy)
 				-- circfill(x, y, 1, 8)
 				-- line(x, y, rx, ry, 9)
-				printh("p:"..x..","..y.." mp:"..shr(x, 3)..","..shr(y, 3))
+				printh("p:" .. x .. "," .. y .. " mp:" .. shr(x, 3) .. "," .. shr(y, 3))
 				return point.new(x, y)
 			else
 				x += ray.magnitude.x
@@ -126,55 +127,62 @@ function raycast(v)
 
 	--Check Horizontal Lines
 	if angle ~= 0.0 and angle ~= 0.5 then
-		atan = -1 / (sin(angle) / cos(angle))
+		local atan = -1 / (sin(angle) / cos(angle))
+
+		local function horzontal_check(correction, direction)
+			local ry = truncate(y, 3) + correction
+			local yo = 8 * direction
+			local ray = vector.new(
+				point.new((y - ry) * atan + x, ry),
+				point.new(-yo * atan, yo)
+			)
+			-- hhit.y -= sgn(yo)
+			local hit = cast(ray, v.magnitude)
+			if hit ~= nil then
+				hit.y -= direction
+				printh("Horizontal HIT!" .. tostr(hit) .. "|" .. hit:length())
+				line(hit.x - 4, hit.y, hit.x + 4, hit.y, 9)
+				return hit
+			end
+		end
+
 		if angle < 0.5 then
 			-- up
-			ry = truncate(y, 3) - 0.0001
-			yo = -8
-			-- xo = -yo * atan
-
+			hhit = horzontal_check(-0.0001, -1) or v.point + v.magnitude
 		elseif angle > 0.5 then
 			-- down
-			ry = truncate(y, 3) + 8
-			yo = 8
-			-- xo = -yo * atan
+			hhit = horzontal_check(8, 1) or v.point + v.magnitude
 		end
-		local ray = vector.new(
-			point.new((y - ry) * atan + x, ry),
-			point.new(-yo * atan, yo)
-		)
-
-		hhit = cast(ray, v.magnitude) or hhit
-		printh("Horizontal HIT!" .. tostr(hhit) .. "|" .. hhit:length())
-		-- circ(hhit.x, hhit.y, 3, 9)
 	end
 
 	--Check Vertical Lines
 	if angle ~= 0.25 and angle ~= 0.75 then
-		local rx
-		ntan = -sin(angle) / cos(angle)
-		if 0.25 < angle and angle < 0.75 then
-			--left
-			rx = truncate(x, 3) - 0.0001
-			-- ry = (x - rx) * ntan + y
-			xo = -8
-			-- yo = -xo * ntan
-		elseif angle < 0.25 or angle > 0.75 then
-			-- right
-			rx = truncate(x, 3) + 8
-			-- ry = (x - rx) * ntan + y
-			xo = 8
-			-- yo = -xo * ntan
+		local ntan = -sin(angle) / cos(angle)
+
+		local function vertical_check(correction, direction)
+			rx = truncate(x, 3) + correction
+			xo = 8 * direction
+			local ray = vector.new(
+				point.new(rx, (x - rx) * ntan + y),
+				point.new(xo, -xo * ntan)
+			)
+			-- hhit.y -= sgn(yo)
+			local hit = cast(ray, v.magnitude)
+			if hit ~= nil then
+				hit.y -= direction
+				printh("Horizontal HIT!" .. tostr(hit) .. "|" .. hit:length())
+				line(hit.x, hit.y - 4, hit.x, hit.y + 4, 9)
+				return hit
+			end
 		end
 
-		local ray = vector.new(
-			point.new(rx, (x - rx) * ntan + y),
-			point.new(xo, -xo * ntan)
-		)
-
-		vhit = cast(ray, v.magnitude) or vhit
-		printh("Vertical HIT!" .. tostr(vhit) .. "|" .. vhit:length())
-		-- circ(hhit.x, hhit.y, 3, 10)
+		if 0.25 < angle and angle < 0.75 then
+			-- left
+			vhit = vertical_check(-0.0001, -1) or v.point + v.magnitude
+		elseif angle < 0.25 or angle > 0.75 then
+			-- right
+			vhit = vertical_check(8, 1) or v.point + v.magnitude
+		end
 	end
 
 	-- Move collision point to playerspace
@@ -294,18 +302,16 @@ function player:update()
 		local x = v.point.x
 		local y = v.point.y
 		local hit = raycast(v)
-		-- if hit ~= nil then
-		line(x, y, hit.point.x, hit.point.y, 12)
-		-- line(x, y, hit.magnitude.x, hit.magnitude.y, 13)
-		-- line(hit.point.x, hit.point.y, hit.point.x + hit.magnitude.x, hit.point.y + hit.magnitude.y, 11)
-		-- line(hit.point.x, hit.point.y, hit.point.x + hit.magnitude.x, hit.point.y + hit.magnitude.y, 11)
-		-- more momentum to burn, maybe
-		printh("HIT LOOP:"..tostr(hit))
-		v = hit
-		-- else
-		-- 	printh("WTF??")
-		-- 	break
-		-- end
+		if hit ~= nil then
+			line(x, y, hit.point.x, hit.point.y, time() * 60)
+			-- line(x, y, hit.magnitude.x, hit.magnitude.y, 13)
+			-- line(hit.point.x, hit.point.y, hit.point.x + hit.magnitude.x, hit.point.y + hit.magnitude.y, 11)
+			-- line(hit.point.x, hit.point.y, hit.point.x + hit.magnitude.x, hit.point.y + hit.magnitude.y, 11)
+			-- more momentum to burn, maybe
+			v = hit
+		else
+			break
+		end
 	end
 	-- end
 
