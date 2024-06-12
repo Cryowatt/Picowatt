@@ -40,16 +40,16 @@ player.__index = player
 function player.new()
 	return setmetatable(
 		{
-			x = 60,
-			y = 60,
-			dx = 47,
-			dy = -17,
-			a_go = 1.0,
-			a_stop = 0.5,
-			xv_max = 5,
+			x = 64,
+			y = 64,
+			dx = 0,
+			dy = -5,
+			a_go = 0.5,
+			a_stop = 0.25,
+			xv_max = 2,
 			yv_max = 5,
-			height = 8,
-			width = 8,
+			height = 7,
+			width = 7,
 			run_multiple = 1.5,
 			freefall = false,
 			h_flip = false
@@ -82,27 +82,10 @@ function movequad(v, size)
 	rect(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, time() * 60)
 	local angle = v:angle()
 	local best_hit = vector.new(v.point + v.magnitude, point.new(0, 0))
+	local best_impulse = point.new(0, 0)
 	local best_distance = v.magnitude:length()
 
 	printh("dir:" .. tostr(v.magnitude) .. "|" .. v.magnitude:length())
-	-- local best_v = point:new
-	-- local best_len = v.magnitude:length()
-
-	-- local function cast(ray)
-	-- 	local d = (ray.point - v.point):length()
-	-- 	local hit = castbeam(ray, point.new(size.x, 0), d, v.magnitude:length())
-	-- 	if hit ~= nil then
-	-- 		local hit_direction = hit - v.point
-	-- 		local hit_v = vector.new(
-	-- 			hit,
-	-- 			point.new(v.magnitude.x - hit_direction.x, 0)
-	-- 		)
-
-	-- 		if hit_direction:length() > best_hit.magnitude:length() then
-	-- 			best_hit = hit_v
-	-- 		end
-	-- 	end
-	-- end
 
 	--Check Horizontal Lines
 	if angle ~= 0.0 and angle ~= 0.5 then
@@ -112,6 +95,7 @@ function movequad(v, size)
 		if angle < 0.5 then
 			-- up
 			local ry = truncate(v.point.y, 3) - 1
+			line(0, ry, 128, ry, time() * 15)
 			local yo = -8
 			ray = vector.new(
 				point.new((v.point.y - ry) * atan + v.point.x, ry),
@@ -119,7 +103,7 @@ function movequad(v, size)
 			)
 		elseif angle > 0.5 then
 			-- down
-			local ry = truncate(v.point.y + size.y, 3)
+			local ry = truncate(v.point.y + size.y, 3) + 8
 			local yo = 8
 			ray = vector.new(
 				point.new((v.point.y + size.y - ry) * atan + v.point.x, ry),
@@ -143,6 +127,7 @@ function movequad(v, size)
 
 			if hit_direction:length() < best_distance then
 				best_hit = hit_v
+				best_impulse = v.magnitude - hit_v.magnitude
 				best_distance = hit_direction:length()
 			end
 		end
@@ -163,7 +148,8 @@ function movequad(v, size)
 			)
 		elseif angle < 0.25 or angle > 0.75 then
 			-- right
-			local rx = truncate(v.point.x + size.x, 3)
+			local rx = truncate(v.point.x + size.x, 3) + 8
+			line(rx, 0, rx, 128, time() * 15)
 			local xo = 8
 			ray = vector.new(
 				point.new(rx, (v.point.x + size.x - rx) * ntan + v.point.y),
@@ -187,12 +173,14 @@ function movequad(v, size)
 
 			if hit_direction:length() < best_distance then
 				best_hit = hit_v
+				best_impulse = v.magnitude - hit_v.magnitude
 				best_distance = hit_direction:length()
 			end
 		end
 	end
 
-	return best_hit
+	printh("impulse: " .. tostr(best_impulse))
+	return best_hit, best_impulse
 end
 
 function notsolid(p)
@@ -200,8 +188,7 @@ function notsolid(p)
 end
 
 function castbeam(v, size, d, max_d)
-	-- line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
-	for i = d, max_d, v.magnitude:length() do
+	for i = 0, max_d, v.magnitude:length() do
 		if notsolid(v.point) and notsolid(v.point + size) then
 			v.point += v.magnitude
 			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
@@ -320,25 +307,42 @@ function raycast(v)
 end
 
 function player:update()
+	-- self.dx = sin(time() / 30) * 8
 	-- self.width = (sin(time()) + 1) * 4
 	-- self.height = (sin(time() + 0.25) + 1) * 4
-	local function dir_input(bid, v, a, f)
-		if btn(bid) then
-			return v + a
-			-- elseif v != 0 then
-			-- 	return v
-			-- 	-- return max(p - v, 0)
-		else
-			return v
+	local function dir_input(bid_minus, bid_plus, v, a, f)
+		if btn(bid_minus) then
+			v -= a
+		elseif v < 0 then
+			v = min(v + f, 0)
 		end
+
+		if btn(bid_plus) then
+			v += a
+		elseif v > 0 then
+			v = max(v - f, 0)
+		end
+
+		return v
 	end
 
-	self.dx = dir_input(0, self.dx, -self.a_go, self.a_stop)
-	self.dx = dir_input(1, self.dx, self.a_go, -self.a_stop)
-	self.dy = dir_input(2, self.dy, -self.a_go, self.a_stop)
-	self.dy = dir_input(3, self.dy, self.a_go, -self.a_stop)
+	self.dx = dir_input(0, 1, self.dx, self.a_go, self.a_stop)
+	if btn(2) then
+		if not notsolid(point.new(self.x, self.y + self.height + 1)) or not notsolid(point.new(self.x + self.width, self.y + self.height + 1)) then
+			self.dy = -16
+		end
+	end
+	-- self.dy = dir_input(2, 3, self.dy, self.a_go, 0)
+	-- gravity
+	self.dy += 0.5
 
-	printh("x:" .. self.dx .. " y:" .. self.dy)
+	self.dx = mid(-self.xv_max, self.dx, self.xv_max)
+	self.dy = mid(-self.yv_max, self.dy, self.yv_max)
+
+	-- self.dx = dir_input(1, self.dx, self.a_go, -self.a_stop)
+	-- self.dy = dir_input(2, self.dy, -self.a_go, self.a_stop)
+	-- self.dy = dir_input(3, self.dy, self.a_go, -self.a_stop)
+
 	-- x, y, dx, dy = raycast(table.unpack(self:tl()), self.dx, self.dy)
 	-- x, y, dx, dy = raycast(self.x, self.y, self.dx, self.dy)
 	-- x, y, dx, dy = raycast(self.x, self.y, self.dx, self.dy)
@@ -353,76 +357,32 @@ function player:update()
 	line(p.x + self.width, p.y, (p + v).x + self.width, (p + v).y, time() * 12)
 	line(p.x + self.width, p.y + self.height, (p + v).x + self.width, (p + v).y + self.height, time() * 12.2)
 
-	local ep = movequad(vector.new(p, v), point.new(self.width, self.height))
-	rect(ep.point.x, ep.point.y, ep.point.x + self.width, ep.point.y + self.height, time() * 60)
+	if v:length() > 0.001 then
+		local physics_vector = vector.new(p, v)
+		local size = point.new(self.width, self.height)
+		local impulse
+		repeat
+			printh("x:" .. physics_vector.point.x .. " y:" .. physics_vector.point.x)
+			physics_vector, impulse = movequad(physics_vector, size)
+			rect(physics_vector.point.x, physics_vector.point.y, physics_vector.point.x + self.width, physics_vector.point.y + self.height, time() * 60)
+			printh(physics_vector.magnitude)
+			-- break
+		until physics_vector.magnitude:length() < 1
 
-	-- Debug abort
-	if true then return end
+		self.x = flr(physics_vector.point.x)
+		self.y = flr(physics_vector.point.y)
 
-	local corners = { point.new(0, 0), point.new(self.width, 0), point.new(0, self.height), point.new(self.width, self.height) }
-	while v:length() > 3 do
-		-- line(p.x, p.y, p.x + v.x, p.y + v.y, time() * 60)
-		local min_l = v:length()
-		local best_hit = vector.new(p + v, point.new(0, 0))
-		-- local r = vector.new(corners[0], v)
-		for i = 1, #corners do
-			local x = p.x + corners[i].x
-			local y = p.y + corners[i].y
-			local hit = raycast(vector.new(p + corners[i], v))
-			if hit != nil then
-				-- local dp = p -hit.point - corners[i]
-				local hit_length = (hit.point - p - corners[i]):length()
-				if min_l > hit_length then
-					min_l = hit_length
-					best_hit = hit
-					best_hit.point -= corners[i]
-					-- line(p.x + corners[i].x, p.y + corners[i].y, best_hit.point.x + corners[i].x, best_hit.point.y + corners[i].y, i * 4 + time() * 60)
-					-- r = vector.new(corners[i], v)
-					printh("NEW BEST" .. tostr(best_hit))
-				end
-			end
-		end
-
-		spr(2, best_hit.point.x, best_hit.point.y, 1, 1, self.h_flip)
-		p = best_hit.point
-		v = best_hit.magnitude
-		printh("ENDPOINT" .. tostr(p))
-		printh("ENDVEL" .. tostr(v))
-	end
-
-	-- v = v -
-	-- p = ep
-
-	-- Where did I end up?
-
-	-- Debug abort
-	if true then return end
-
-	local v = vector.new(point.new(self:tl()), point.new(self.dx, self.dy))
-	while v.magnitude:length() > 0 do
-		local x = v.point.x
-		local y = v.point.y
-		local hit = raycast(v)
-		if hit ~= nil then
-			line(x, y, hit.point.x, hit.point.y, time() * 60)
-			-- line(x, y, hit.magnitude.x, hit.magnitude.y, 13)
-			-- line(hit.point.x, hit.point.y, hit.point.x + hit.magnitude.x, hit.point.y + hit.magnitude.y, 11)
-			-- line(hit.point.x, hit.point.y, hit.point.x + hit.magnitude.x, hit.point.y + hit.magnitude.y, 11)
-			-- more momentum to burn, maybe
-			v = hit
-			break
-		else
-			break
-		end
-	end
-	-- end
-
-	if hit ~= nil then
-		printh("HiT?" .. tostr(hit))
+		self.dx -= impulse.x
+		self.dy -= impulse.y
+	else
+		self.dx = 0
+		self.dy = 0
+		self.x = flr(self.x)
+		self.y = flr(self.y)
 	end
 end
 
 function player:draw()
-	-- spr(2, self.x, self.y, 1, 1, self.h_flip)
+	spr(2, self.x, self.y, 1, 1, self.h_flip)
 	circ(self.x + self.dx, self.y + self.dy, 2, 14)
 end
