@@ -42,8 +42,8 @@ function player.new()
 		{
 			x = 60,
 			y = 60,
-			dx = 24,
-			dy = 48,
+			dx = 47,
+			dy = -17,
 			a_go = 1.0,
 			a_stop = 0.5,
 			xv_max = 5,
@@ -134,15 +134,16 @@ function movequad(v, size)
 				hit.y -= size.y
 			end
 			local hit_direction = hit - v.point
+			rectfill(hit.x, hit.y, hit.x + size.x, hit.y + size.y, 8)
 			local hit_v = vector.new(
 				hit,
 				point.new(v.magnitude.x - hit_direction.x, 0)
 			)
-			printh("hdir:" .. tostr(hit_v.point) .. "|" .. hit_v.magnitude:length())
+			printh("hdir:" .. tostr(hit_direction) .. "|" .. hit_direction:length())
 
 			if hit_direction:length() < best_distance then
 				best_hit = hit_v
-				best_distance = (hit - v.point):length()
+				best_distance = hit_direction:length()
 			end
 		end
 	end
@@ -162,7 +163,7 @@ function movequad(v, size)
 			)
 		elseif angle < 0.25 or angle > 0.75 then
 			-- right
-			local rx = truncate(v.point.x + size.x, 3) + 8
+			local rx = truncate(v.point.x + size.x, 3)
 			local xo = 8
 			ray = vector.new(
 				point.new(rx, (v.point.x + size.x - rx) * ntan + v.point.y),
@@ -177,15 +178,16 @@ function movequad(v, size)
 				hit.x -= size.x
 			end
 			local hit_direction = hit - v.point
+			rectfill(hit.x, hit.y, hit.x + size.x, hit.y + size.y, 9)
 			local hit_v = vector.new(
 				hit,
 				point.new(0, v.magnitude.y - hit_direction.y)
 			)
-			printh("vdir:" .. tostr(hit_v.point) .. "|" .. hit_v.magnitude:length())
+			printh("vdir:" .. tostr(hit_direction) .. "|" .. hit_direction:length())
 
 			if hit_direction:length() < best_distance then
 				best_hit = hit_v
-				best_distance = (hit - v.point):length()
+				best_distance = hit_direction:length()
 			end
 		end
 	end
@@ -336,6 +338,7 @@ function player:update()
 	self.dy = dir_input(2, self.dy, -self.a_go, self.a_stop)
 	self.dy = dir_input(3, self.dy, self.a_go, -self.a_stop)
 
+	printh("x:" .. self.dx .. " y:" .. self.dy)
 	-- x, y, dx, dy = raycast(table.unpack(self:tl()), self.dx, self.dy)
 	-- x, y, dx, dy = raycast(self.x, self.y, self.dx, self.dy)
 	-- x, y, dx, dy = raycast(self.x, self.y, self.dx, self.dy)
