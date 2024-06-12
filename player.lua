@@ -43,7 +43,7 @@ function player.new()
 			x = 60,
 			y = 60,
 			dx = 24,
-			dy = -48,
+			dy = 48,
 			a_go = 1.0,
 			a_stop = 0.5,
 			xv_max = 5,
@@ -79,79 +79,118 @@ function truncate(value, bits)
 end
 
 function movequad(v, size)
-	printh(size.x)
 	rect(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, time() * 60)
-	local h_hit
-	local v_hit
 	local angle = v:angle()
+	local best_hit = vector.new(v.point + v.magnitude, point.new(0, 0))
+	local best_distance = v.magnitude:length()
+
+	printh("dir:" .. tostr(v.magnitude) .. "|" .. v.magnitude:length())
+	-- local best_v = point:new
+	-- local best_len = v.magnitude:length()
+
+	-- local function cast(ray)
+	-- 	local d = (ray.point - v.point):length()
+	-- 	local hit = castbeam(ray, point.new(size.x, 0), d, v.magnitude:length())
+	-- 	if hit ~= nil then
+	-- 		local hit_direction = hit - v.point
+	-- 		local hit_v = vector.new(
+	-- 			hit,
+	-- 			point.new(v.magnitude.x - hit_direction.x, 0)
+	-- 		)
+
+	-- 		if hit_direction:length() > best_hit.magnitude:length() then
+	-- 			best_hit = hit_v
+	-- 		end
+	-- 	end
+	-- end
+
 	--Check Horizontal Lines
 	if angle ~= 0.0 and angle ~= 0.5 then
 		local atan = -1 / (sin(angle) / cos(angle))
+		local ray
 
 		if angle < 0.5 then
 			-- up
 			local ry = truncate(v.point.y, 3) - 1
 			local yo = -8
-			local ray = vector.new(
+			ray = vector.new(
 				point.new((v.point.y - ry) * atan + v.point.x, ry),
 				point.new(-yo * atan, yo)
 			)
-
-			-- rect(ray.point.x, ray.point.y, ray.point.x + size.x, ray.point.y + size.y, 6)
-			local fk = v.magnitude - (ray.point - v.point)
-			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
-			local d = (ray.point - v.point):length()
-			h_hit = castbeam(ray, point.new(size.x, 0), d, v.magnitude:length() - d)
 		elseif angle > 0.5 then
 			-- down
-			local ry = truncate(v.point.y + size.y, 3) + 8
+			local ry = truncate(v.point.y + size.y, 3)
 			local yo = 8
-			local ray = vector.new(
+			ray = vector.new(
 				point.new((v.point.y + size.y - ry) * atan + v.point.x, ry),
 				point.new(-yo * atan, yo)
 			)
+		end
 
-			-- rect(ray.point.x, ray.point.y, ray.point.x + size.x, ray.point.y + size.y, 6)
-			local fk = v.magnitude - (ray.point - v.point)
-			-- line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
-			-- h_hit = castbeam(ray, point.new(size.x, 0), (v.magnitude - (ray.point - v.point)):length())
+		local d = (ray.point - v.point):length()
+		local hit = castbeam(ray, point.new(size.x, 0), d, v.magnitude:length())
+		if hit ~= nil then
+			if v.magnitude.y >= 0 then
+				hit.y -= size.y
+			end
+			local hit_direction = hit - v.point
+			local hit_v = vector.new(
+				hit,
+				point.new(v.magnitude.x - hit_direction.x, 0)
+			)
+			printh("hdir:" .. tostr(hit_v.point) .. "|" .. hit_v.magnitude:length())
+
+			if hit_direction:length() < best_distance then
+				best_hit = hit_v
+				best_distance = (hit - v.point):length()
+			end
 		end
 	end
 
 	--Check Vertical Lines
 	if angle ~= 0.25 and angle ~= 0.75 then
 		local ntan = -sin(angle) / cos(angle)
+		local ray
 
 		if 0.25 < angle and angle < 0.75 then
 			-- left
-			printh("v-left")
 			local rx = truncate(v.point.x, 3) - 1
 			local xo = -8
-			local ray = vector.new(
+			ray = vector.new(
 				point.new(rx, (v.point.x - rx) * ntan + v.point.y),
 				point.new(xo, -xo * ntan)
 			)
-
-			-- rect(v.point.x + size.x, ray.point.y, ray.point.x, ray.point.y + size.y, 6)
-			local fk = v.magnitude - (ray.point - v.point)
-			-- line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
-			-- v_hit = castbeam(ray, point.new(0, size.y), (v.magnitude - (ray.point - v.point)):length())
 		elseif angle < 0.25 or angle > 0.75 then
 			-- right
-			printh("v-right")
 			local rx = truncate(v.point.x + size.x, 3) + 8
 			local xo = 8
-			local ray = vector.new(
+			ray = vector.new(
 				point.new(rx, (v.point.x + size.x - rx) * ntan + v.point.y),
 				point.new(xo, -xo * ntan)
 			)
+		end
 
-			-- rect(v.point.x + size.x, ray.point.y, ray.point.x, ray.point.y + size.y, 6)
-			local fk = v.magnitude - (ray.point - v.point)
-			-- line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
-			-- v_hit = castbeam(ray, point.new(0, size.y), (v.magnitude - (ray.point - v.point)):length())
+		local d = (ray.point - v.point):length()
+		local hit = castbeam(ray, point.new(0, size.y), d, v.magnitude:length())
+		if hit ~= nil then
+			if v.magnitude.x >= 0 then
+				hit.x -= size.x
+			end
+			local hit_direction = hit - v.point
+			local hit_v = vector.new(
+				hit,
+				point.new(0, v.magnitude.y - hit_direction.y)
+			)
+			printh("vdir:" .. tostr(hit_v.point) .. "|" .. hit_v.magnitude:length())
+
+			if hit_direction:length() < best_distance then
+				best_hit = hit_v
+				best_distance = (hit - v.point):length()
+			end
 		end
 	end
+
+	return best_hit
 end
 
 function notsolid(p)
@@ -159,21 +198,19 @@ function notsolid(p)
 end
 
 function castbeam(v, size, d, max_d)
-	line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
-	-- local d = 0
+	-- line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
 	for i = d, max_d, v.magnitude:length() do
-		-- while d < max_d do
-		local next = v.point + v.magnitude
-		-- d += v.magnitude:length()
-
-		if notsolid(next) and notsolid(next + size) then
-			v.point = next
+		if notsolid(v.point) and notsolid(v.point + size) then
+			v.point += v.magnitude
 			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
+		else
+			-- Do wall backoff here
+			v.point.x -= v.magnitude.x / 8
+			v.point.y -= v.magnitude.y / 8
+			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 11)
+			return v.point
 		end
 	end
-
-	line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 11)
-	return v.point
 end
 
 function raycast(v)
@@ -308,12 +345,13 @@ function player:update()
 	local p = point.new(self.x, self.y)
 	local v = point.new(self.dx, self.dy)
 
-	line(p.x, p.y, (p + v).x, (p + v).y, time() * 60)
-	line(p.x, p.y + self.height, (p + v).x, (p + v).y + self.height, time() * 60)
-	line(p.x + self.width, p.y, (p + v).x + self.width, (p + v).y, time() * 60)
-	line(p.x + self.width, p.y + self.height, (p + v).x + self.width, (p + v).y + self.height, time() * 60)
+	line(p.x, p.y, (p + v).x, (p + v).y, time() * 12.1)
+	line(p.x, p.y + self.height, (p + v).x, (p + v).y + self.height, time() * 11.9)
+	line(p.x + self.width, p.y, (p + v).x + self.width, (p + v).y, time() * 12)
+	line(p.x + self.width, p.y + self.height, (p + v).x + self.width, (p + v).y + self.height, time() * 12.2)
 
-	movequad(vector.new(p, v), point.new(self.width, self.height))
+	local ep = movequad(vector.new(p, v), point.new(self.width, self.height))
+	rect(ep.point.x, ep.point.y, ep.point.x + self.width, ep.point.y + self.height, time() * 60)
 
 	-- Debug abort
 	if true then return end
