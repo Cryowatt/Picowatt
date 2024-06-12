@@ -42,14 +42,14 @@ function player.new()
 		{
 			x = 60,
 			y = 60,
-			dx = 0,
-			dy = 0,
+			dx = 24,
+			dy = -48,
 			a_go = 1.0,
 			a_stop = 0.5,
 			xv_max = 5,
 			yv_max = 5,
 			height = 8,
-			width = 5,
+			width = 8,
 			run_multiple = 1.5,
 			freefall = false,
 			h_flip = false
@@ -78,37 +78,121 @@ function truncate(value, bits)
 	return shl(flr(shr(value, bits)), bits)
 end
 
+function movequad(v, size)
+	printh(size.x)
+	rect(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, time() * 60)
+	local h_hit
+	local v_hit
+	local angle = v:angle()
+	--Check Horizontal Lines
+	if angle ~= 0.0 and angle ~= 0.5 then
+		local atan = -1 / (sin(angle) / cos(angle))
+
+		if angle < 0.5 then
+			-- up
+			local ry = truncate(v.point.y, 3) - 1
+			local yo = -8
+			local ray = vector.new(
+				point.new((v.point.y - ry) * atan + v.point.x, ry),
+				point.new(-yo * atan, yo)
+			)
+
+			-- rect(ray.point.x, ray.point.y, ray.point.x + size.x, ray.point.y + size.y, 6)
+			local fk = v.magnitude - (ray.point - v.point)
+			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			h_hit = castbeam(ray, point.new(size.x, 0), (ray.point - v.point):length(), v.magnitude:length())
+		elseif angle > 0.5 then
+			-- down
+			local ry = truncate(v.point.y + size.y, 3) + 8
+			local yo = 8
+			local ray = vector.new(
+				point.new((v.point.y + size.y - ry) * atan + v.point.x, ry),
+				point.new(-yo * atan, yo)
+			)
+
+			-- rect(ray.point.x, ray.point.y, ray.point.x + size.x, ray.point.y + size.y, 6)
+			local fk = v.magnitude - (ray.point - v.point)
+			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			-- h_hit = castbeam(ray, point.new(size.x, 0), (v.magnitude - (ray.point - v.point)):length())
+		end
+	end
+
+	--Check Vertical Lines
+	if angle ~= 0.25 and angle ~= 0.75 then
+		local ntan = -sin(angle) / cos(angle)
+
+		if 0.25 < angle and angle < 0.75 then
+			-- left
+			printh("v-left")
+			local rx = truncate(v.point.x, 3) - 1
+			local xo = -8
+			local ray = vector.new(
+				point.new(rx, (v.point.x - rx) * ntan + v.point.y),
+				point.new(xo, -xo * ntan)
+			)
+
+			-- rect(v.point.x + size.x, ray.point.y, ray.point.x, ray.point.y + size.y, 6)
+			local fk = v.magnitude - (ray.point - v.point)
+			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			-- v_hit = castbeam(ray, point.new(0, size.y), (v.magnitude - (ray.point - v.point)):length())
+		elseif angle < 0.25 or angle > 0.75 then
+			-- right
+			printh("v-right")
+			local rx = truncate(v.point.x + size.x, 3) + 8
+			local xo = 8
+			local ray = vector.new(
+				point.new(rx, (v.point.x + size.x - rx) * ntan + v.point.y),
+				point.new(xo, -xo * ntan)
+			)
+
+			-- rect(v.point.x + size.x, ray.point.y, ray.point.x, ray.point.y + size.y, 6)
+			local fk = v.magnitude - (ray.point - v.point)
+			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			-- v_hit = castbeam(ray, point.new(0, size.y), (v.magnitude - (ray.point - v.point)):length())
+		end
+	end
+end
+
+function notsolid(p)
+	return not fget(mget(flr(shr(p.x, 3)), flr(shr(p.y, 3))), tile_flag.solid)
+end
+
+function castbeam(v, size, d, max_d)
+	line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
+	-- local d = 0
+	for i = d, max_d, v.magnitude:length() do
+		-- while d < max_d do
+		local next = v.point + v.magnitude
+		-- d += v.magnitude:length()
+
+		if notsolid(next) and notsolid(next + size) then
+			v.point = next
+			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
+		end
+	end
+
+	line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 11)
+	return v.point
+end
+
 function raycast(v)
-	printh("CAST" .. tostr(v))
 	local x = v.point.x
 	local y = v.point.y
-	local dx = v.magnitude.x
-	local dy = v.magnitude.y
 	local hhit
 	local vhit
 	local hlength
 	local vlength
-	local hx = x + dx
-	local hy = y + dy
-	local vx = x + dx
-	local vy = y + dy
 	local angle = v:angle()
 
 	local function cast(ray, map_offset, max_magnitude)
-		printh("cast::" .. tostr(ray))
-		local x = ray.point.x
-		local y = ray.point.y
-		local max_length = max_magnitude:length()
-		local length = ray.magnitude:length()
+		local p = point.new(ray.point.x, ray.point.y)
 		local dof = 0
-		while dof < max_length do
-			pset(x, y, 6)
-			if fget(mget(shr(x + map_offset.x, 3), shr(y + map_offset.y, 3)), tile_flag.solid) then
-				return point.new(x, y)
+		while dof < max_magnitude:length() do
+			if fget(mget(flr(shr(p.x + map_offset.x, 3)), flr(shr(p.y + map_offset.y, 3))), tile_flag.solid) then
+				return p
 			else
-				x += ray.magnitude.x
-				y += ray.magnitude.y
-				dof += length
+				p += ray.magnitude
+				dof += ray.magnitude:length()
 			end
 		end
 	end
@@ -124,11 +208,10 @@ function raycast(v)
 				point.new((y - ry) * atan + x, ry),
 				point.new(-yo * atan, yo)
 			)
-			local hit = cast(ray, point.new(0, direction), v.magnitude)
+			local hit = cast(ray, point.new(0, 0), v.magnitude)
 			if hit ~= nil then
-				hit.y = hit.y
 				local length = (v.point - hit):length()
-				printh("Horizontal HIT!" .. tostr(hit) .. "|" .. length .. " post-correct " .. hit:length())
+				hit.y -= direction
 				line(hit.x - 4, hit.y, hit.x + 4, hit.y, 11)
 				return hit, length
 			end
@@ -136,7 +219,7 @@ function raycast(v)
 
 		if angle < 0.5 then
 			-- up
-			hhit, hlength = horzontal_check(0, -1) -- or v.point + v.magnitude, v.magnitude:length()
+			hhit, hlength = horzontal_check(-0.5, -1) -- or v.point + v.magnitude, v.magnitude:length()
 		elseif angle > 0.5 then
 			-- down
 			hhit, hlength = horzontal_check(8, 1) -- or v.point + v.magnitude, v.magnitude:length()
@@ -159,12 +242,11 @@ function raycast(v)
 				point.new(xo, -xo * ntan)
 			)
 			-- hhit.y -= sgn(yo)
-			local hit = cast(ray, point.new(direction, 0), v.magnitude)
+			local hit = cast(ray, point.new(0, 0), v.magnitude)
 			if hit ~= nil then
 				-- hit.x = flr(hit.x - direction)
-				hit.x = hit.x
 				local length = (v.point - hit):length()
-				printh("Vertical HIT!" .. tostr(hit) .. "|" .. length .. " post-correct " .. hit:length())
+				hit.x -= direction
 				line(hit.x, hit.y - 4, hit.x, hit.y + 4, 12)
 				return hit, length
 			end
@@ -172,7 +254,7 @@ function raycast(v)
 
 		if 0.25 < angle and angle < 0.75 then
 			-- left
-			vhit, vlength = vertical_check(0, -1) -- or v.point + v.magnitude, v.magnitude:length()
+			vhit, vlength = vertical_check(-0.5, -1) -- or v.point + v.magnitude, v.magnitude:length()
 		elseif angle < 0.25 or angle > 0.75 then
 			-- right
 			vhit, vlength = vertical_check(8, 1) -- or v.point + v.magnitude, v.magnitude:length()
@@ -188,7 +270,6 @@ function raycast(v)
 	-- local hdv = hhit - v.point
 	-- local vdv = vhit - v.point
 
-	printh("len check:" .. tostr(hlength) .. "|" .. tostr(vlength) .. "vmag:" .. v.magnitude:length())
 	if (hlength or 0x7fff.ffff) < (vlength or 0x7fff.ffff) then
 		dv = hhit - v.point
 		return vector.new(hhit, point.new(v.magnitude.x - dv.x, 0))
@@ -199,6 +280,8 @@ function raycast(v)
 end
 
 function player:update()
+	-- self.width = (sin(time()) + 1) * 4
+	-- self.height = (sin(time() + 0.25) + 1) * 4
 	local function dir_input(bid, v, a, f)
 		if btn(bid) then
 			return v + a
@@ -220,34 +303,55 @@ function player:update()
 	-- x, y, dx, dy = raycast(self.x, self.y, self.dx, self.dy)
 	-- x, y, dx, dy = raycast(self.x, self.y, self.dx, self.dy)
 	-- for i = 1, 50 do
-	local corners = { point.new(0, 0) }
-	--, point.new(self.width, 0), point.new(0, self.height), point.new(self.width, self.height) }
 	-- local corners = { self:tl(), self:tr(), self:bl(), self:br() }
 	local p = point.new(self.x, self.y)
 	local v = point.new(self.dx, self.dy)
-	line(p.x, p.y, p.x + v.x, p.y + v.y, time() * 60)
-	local min_l = v:length()
-	local ep = point.new(self.x + self.dx, self.y + self.dy)
-	-- local r = vector.new(corners[0], v)
-	for i = 1, #corners do
-		local x = p.x + corners[i].x
-		local y = p.y + corners[i].y
-		local hit = raycast(vector.new(p + corners[i], v))
-		if hit != nil then
-			-- local dp = p -hit.point - corners[i]
-			local hit_length = (hit.point - p - corners[i]):length()
-			if min_l > hit_length then
-				min_l = hit_length
-				ep = hit.point - corners[i]
-				line(x, y, hit.point.x, hit.point.y, i * 4 + time() * 60)
-				-- r = vector.new(corners[i], v)
-				printh("NEW BEST" .. tostr(ep))
+
+	line(p.x, p.y, (p + v).x, (p + v).y, time() * 60)
+	line(p.x, p.y + self.height, (p + v).x, (p + v).y + self.height, time() * 60)
+	line(p.x + self.width, p.y, (p + v).x + self.width, (p + v).y, time() * 60)
+	line(p.x + self.width, p.y + self.height, (p + v).x + self.width, (p + v).y + self.height, time() * 60)
+
+	movequad(vector.new(p, v), point.new(self.width, self.height))
+
+	-- Debug abort
+	if true then return end
+
+	local corners = { point.new(0, 0), point.new(self.width, 0), point.new(0, self.height), point.new(self.width, self.height) }
+	while v:length() > 3 do
+		-- line(p.x, p.y, p.x + v.x, p.y + v.y, time() * 60)
+		local min_l = v:length()
+		local best_hit = vector.new(p + v, point.new(0, 0))
+		-- local r = vector.new(corners[0], v)
+		for i = 1, #corners do
+			local x = p.x + corners[i].x
+			local y = p.y + corners[i].y
+			local hit = raycast(vector.new(p + corners[i], v))
+			if hit != nil then
+				-- local dp = p -hit.point - corners[i]
+				local hit_length = (hit.point - p - corners[i]):length()
+				if min_l > hit_length then
+					min_l = hit_length
+					best_hit = hit
+					best_hit.point -= corners[i]
+					-- line(p.x + corners[i].x, p.y + corners[i].y, best_hit.point.x + corners[i].x, best_hit.point.y + corners[i].y, i * 4 + time() * 60)
+					-- r = vector.new(corners[i], v)
+					printh("NEW BEST" .. tostr(best_hit))
+				end
 			end
 		end
+
+		spr(2, best_hit.point.x, best_hit.point.y, 1, 1, self.h_flip)
+		p = best_hit.point
+		v = best_hit.magnitude
+		printh("ENDPOINT" .. tostr(p))
+		printh("ENDVEL" .. tostr(v))
 	end
 
+	-- v = v -
+	-- p = ep
+
 	-- Where did I end up?
-	spr(2, ep.x, ep.y, 1, 1, self.h_flip)
 
 	-- Debug abort
 	if true then return end
@@ -272,16 +376,11 @@ function player:update()
 	-- end
 
 	if hit ~= nil then
-		-- hit = hit.point
 		printh("HiT?" .. tostr(hit))
-		-- line(self.x, self.y, hit.point.x, hit.point.y, 12)
-		-- pset(hit.x, hit.y, 11)
-		-- circ(hit.x, hit.y, 3, 3)
 	end
 end
 
 function player:draw()
-	spr(2, self.x, self.y, 1, 1, self.h_flip)
+	-- spr(2, self.x, self.y, 1, 1, self.h_flip)
 	circ(self.x + self.dx, self.y + self.dy, 2, 14)
-	-- spr(2, self.x + self.dx, self.y + self.dy, 1, 1, self.h_flip)
 end
