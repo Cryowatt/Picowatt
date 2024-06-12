@@ -100,7 +100,8 @@ function movequad(v, size)
 			-- rect(ray.point.x, ray.point.y, ray.point.x + size.x, ray.point.y + size.y, 6)
 			local fk = v.magnitude - (ray.point - v.point)
 			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
-			h_hit = castbeam(ray, point.new(size.x, 0), (ray.point - v.point):length(), v.magnitude:length())
+			local d = (ray.point - v.point):length()
+			h_hit = castbeam(ray, point.new(size.x, 0), d, v.magnitude:length() - d)
 		elseif angle > 0.5 then
 			-- down
 			local ry = truncate(v.point.y + size.y, 3) + 8
@@ -112,7 +113,7 @@ function movequad(v, size)
 
 			-- rect(ray.point.x, ray.point.y, ray.point.x + size.x, ray.point.y + size.y, 6)
 			local fk = v.magnitude - (ray.point - v.point)
-			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			-- line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
 			-- h_hit = castbeam(ray, point.new(size.x, 0), (v.magnitude - (ray.point - v.point)):length())
 		end
 	end
@@ -133,7 +134,7 @@ function movequad(v, size)
 
 			-- rect(v.point.x + size.x, ray.point.y, ray.point.x, ray.point.y + size.y, 6)
 			local fk = v.magnitude - (ray.point - v.point)
-			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			-- line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
 			-- v_hit = castbeam(ray, point.new(0, size.y), (v.magnitude - (ray.point - v.point)):length())
 		elseif angle < 0.25 or angle > 0.75 then
 			-- right
@@ -147,7 +148,7 @@ function movequad(v, size)
 
 			-- rect(v.point.x + size.x, ray.point.y, ray.point.x, ray.point.y + size.y, 6)
 			local fk = v.magnitude - (ray.point - v.point)
-			line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
+			-- line(ray.point.x, ray.point.y, ray.point.x + fk.x, ray.point.y + fk.y, 12)
 			-- v_hit = castbeam(ray, point.new(0, size.y), (v.magnitude - (ray.point - v.point)):length())
 		end
 	end
