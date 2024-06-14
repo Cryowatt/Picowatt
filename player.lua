@@ -44,7 +44,7 @@ function player.new()
 			y = 64,
 			dx = 0,
 			dy = -5,
-			a_go = 0.5,
+			a_go = 0.25,
 			a_stop = 0.25,
 			xv_max = 2,
 			yv_max = 5,
@@ -123,11 +123,13 @@ function movequad(v, size)
 				hit,
 				point.new(v.magnitude.x - hit_direction.x, 0)
 			)
-			printh("hdir:" .. tostr(hit_direction) .. "|" .. hit_direction:length())
+			printh("hdir:" .. tostr(hit_direction) .. "|" .. tostr(hit_direction:length(), 1))
+			-- local hit_distance = hit_direction:length()
 
 			if hit_direction:length() <= best_distance then
 				best_hit = hit_v
 				best_impulse = v.magnitude - hit_v.magnitude
+				printh("impulse: " .. tostr(best_impulse))
 				best_distance = hit_direction:length()
 			end
 		end
@@ -169,17 +171,19 @@ function movequad(v, size)
 				hit,
 				point.new(0, v.magnitude.y - hit_direction.y)
 			)
-			printh("vdir:" .. tostr(hit_direction) .. "|" .. hit_direction:length())
+			printh("vdir:" .. tostr(hit_direction) .. "|" .. tostr(hit_direction:length(), 1))
+
+			-- local hit_distance = hit_direction:length()
 
 			if hit_direction:length() <= best_distance then
 				best_hit = hit_v
 				best_impulse = v.magnitude - hit_v.magnitude
+				printh("impulse: " .. tostr(best_impulse))
 				best_distance = hit_direction:length()
 			end
 		end
 	end
 
-	printh("impulse: " .. tostr(best_impulse))
 	return best_hit, best_impulse
 end
 
@@ -196,6 +200,7 @@ function castbeam(v, size, d, max_d)
 			-- Do wall backoff here
 			v.point.x -= v.magnitude.x / 8
 			v.point.y -= v.magnitude.y / 8
+			printh("beam hit:" .. tostr(v.point))
 			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 11)
 			return v.point
 		end
@@ -262,8 +267,9 @@ function player:update()
 			physics_vector, impulse = movequad(physics_vector, size)
 			rect(physics_vector.point.x, physics_vector.point.y, physics_vector.point.x + self.width, physics_vector.point.y + self.height, time() * 60)
 			printh(physics_vector.magnitude)
+			printh(physics_vector.point)
 			-- break
-		until physics_vector.magnitude:length() < 1
+		until physics_vector.magnitude:length() < 0.25
 
 		self.x = flr(physics_vector.point.x)
 		self.y = flr(physics_vector.point.y)
