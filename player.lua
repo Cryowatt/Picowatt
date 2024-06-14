@@ -48,8 +48,8 @@ function player.new()
 			a_stop = 0.25,
 			xv_max = 2,
 			yv_max = 5,
-			height = 7,
-			width = 7,
+			height = 5,
+			width = 5,
 			run_multiple = 1.5,
 			freefall = false,
 			h_flip = false
@@ -125,7 +125,7 @@ function movequad(v, size)
 			)
 			printh("hdir:" .. tostr(hit_direction) .. "|" .. hit_direction:length())
 
-			if hit_direction:length() < best_distance then
+			if hit_direction:length() <= best_distance then
 				best_hit = hit_v
 				best_impulse = v.magnitude - hit_v.magnitude
 				best_distance = hit_direction:length()
@@ -171,7 +171,7 @@ function movequad(v, size)
 			)
 			printh("vdir:" .. tostr(hit_direction) .. "|" .. hit_direction:length())
 
-			if hit_direction:length() < best_distance then
+			if hit_direction:length() <= best_distance then
 				best_hit = hit_v
 				best_impulse = v.magnitude - hit_v.magnitude
 				best_distance = hit_direction:length()
@@ -199,110 +199,6 @@ function castbeam(v, size, d, max_d)
 			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 11)
 			return v.point
 		end
-	end
-end
-
-function raycast(v)
-	local x = v.point.x
-	local y = v.point.y
-	local hhit
-	local vhit
-	local hlength
-	local vlength
-	local angle = v:angle()
-
-	local function cast(ray, map_offset, max_magnitude)
-		local p = point.new(ray.point.x, ray.point.y)
-		local dof = 0
-		while dof < max_magnitude:length() do
-			if fget(mget(flr(shr(p.x + map_offset.x, 3)), flr(shr(p.y + map_offset.y, 3))), tile_flag.solid) then
-				return p
-			else
-				p += ray.magnitude
-				dof += ray.magnitude:length()
-			end
-		end
-	end
-
-	--Check Horizontal Lines
-	if angle ~= 0.0 and angle ~= 0.5 then
-		local atan = -1 / (sin(angle) / cos(angle))
-
-		local function horzontal_check(correction, direction)
-			local ry = truncate(y, 3) + correction
-			local yo = 8 * direction
-			local ray = vector.new(
-				point.new((y - ry) * atan + x, ry),
-				point.new(-yo * atan, yo)
-			)
-			local hit = cast(ray, point.new(0, 0), v.magnitude)
-			if hit ~= nil then
-				local length = (v.point - hit):length()
-				hit.y -= direction
-				line(hit.x - 4, hit.y, hit.x + 4, hit.y, 11)
-				return hit, length
-			end
-		end
-
-		if angle < 0.5 then
-			-- up
-			hhit, hlength = horzontal_check(-0.5, -1) -- or v.point + v.magnitude, v.magnitude:length()
-		elseif angle > 0.5 then
-			-- down
-			hhit, hlength = horzontal_check(8, 1) -- or v.point + v.magnitude, v.magnitude:length()
-		end
-	end
-	if hhit == nil then
-		hhit = v.point + v.magnitude
-		hlength = v.magnitude:length()
-	end
-
-	--Check Vertical Lines
-	if angle ~= 0.25 and angle ~= 0.75 then
-		local ntan = -sin(angle) / cos(angle)
-
-		local function vertical_check(correction, direction)
-			rx = truncate(x, 3) + correction
-			xo = 8 * direction
-			local ray = vector.new(
-				point.new(rx, (x - rx) * ntan + y),
-				point.new(xo, -xo * ntan)
-			)
-			-- hhit.y -= sgn(yo)
-			local hit = cast(ray, point.new(0, 0), v.magnitude)
-			if hit ~= nil then
-				-- hit.x = flr(hit.x - direction)
-				local length = (v.point - hit):length()
-				hit.x -= direction
-				line(hit.x, hit.y - 4, hit.x, hit.y + 4, 12)
-				return hit, length
-			end
-		end
-
-		if 0.25 < angle and angle < 0.75 then
-			-- left
-			vhit, vlength = vertical_check(-0.5, -1) -- or v.point + v.magnitude, v.magnitude:length()
-		elseif angle < 0.25 or angle > 0.75 then
-			-- right
-			vhit, vlength = vertical_check(8, 1) -- or v.point + v.magnitude, v.magnitude:length()
-		end
-	end
-
-	if vhit == nil then
-		vhit = v.point + v.magnitude
-		vlength = v.magnitude:length()
-	end
-
-	-- Move collision point to playerspace
-	-- local hdv = hhit - v.point
-	-- local vdv = vhit - v.point
-
-	if (hlength or 0x7fff.ffff) < (vlength or 0x7fff.ffff) then
-		dv = hhit - v.point
-		return vector.new(hhit, point.new(v.magnitude.x - dv.x, 0))
-	else
-		dv = vhit - v.point
-		return vector.new(vhit, point.new(0, v.magnitude.y - dv.y))
 	end
 end
 
