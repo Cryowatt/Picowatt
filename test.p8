@@ -2,8 +2,11 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
-printh("") printh("") printh("") printh("") printh("")
 #include punit.lua
+
+#include physics.lua
+#include player.lua
+
 #include test.lua
 
 __gfx__

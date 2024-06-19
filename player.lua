@@ -37,19 +37,19 @@ end
 
 local player = {}
 player.__index = player
-function player.new()
+function player.new(x, y)
 	return setmetatable(
 		{
-			x = 64,
-			y = 64,
+			x = x,
+			y = y,
 			dx = 0,
-			dy = -5,
+			dy = 0,
 			a_go = 0.25,
 			a_stop = 0.25,
 			xv_max = 2,
 			yv_max = 5,
-			height = 5,
-			width = 5,
+			height = 4,
+			width = 4,
 			run_multiple = 1.5,
 			freefall = false,
 			h_flip = false
@@ -79,13 +79,13 @@ function truncate(value, bits)
 end
 
 function movequad(v, size)
-	rect(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, time() * 60)
+	-- rect(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, time() * 60)
 	local angle = v:angle()
 	local best_hit = vector.new(v.point + v.magnitude, point.new(0, 0))
 	local best_impulse = point.new(0, 0)
 	local best_distance = v.magnitude:length()
 
-	printh("dir:" .. tostr(v.magnitude) .. "|" .. v.magnitude:length())
+	-- printh("dir:" .. tostr(v.magnitude) .. "|" .. v.magnitude:length())
 
 	--Check Horizontal Lines
 	if angle ~= 0.0 and angle ~= 0.5 then
@@ -123,13 +123,13 @@ function movequad(v, size)
 				hit,
 				point.new(v.magnitude.x - hit_direction.x, 0)
 			)
-			printh("hdir:" .. tostr(hit_direction) .. "|" .. tostr(hit_direction:length(), 1))
+			-- printh("hdir:" .. tostr(hit_direction) .. "|" .. tostr(hit_direction:length(), 1))
 			-- local hit_distance = hit_direction:length()
 
 			if hit_direction:length() <= best_distance then
 				best_hit = hit_v
 				best_impulse = v.magnitude - hit_v.magnitude
-				printh("impulse: " .. tostr(best_impulse))
+				-- printh("impulse: " .. tostr(best_impulse))
 				best_distance = hit_direction:length()
 			end
 		end
@@ -171,14 +171,14 @@ function movequad(v, size)
 				hit,
 				point.new(0, v.magnitude.y - hit_direction.y)
 			)
-			printh("vdir:" .. tostr(hit_direction) .. "|" .. tostr(hit_direction:length(), 1))
+			-- printh("vdir:" .. tostr(hit_direction) .. "|" .. tostr(hit_direction:length(), 1))
 
 			-- local hit_distance = hit_direction:length()
 
 			if hit_direction:length() <= best_distance then
 				best_hit = hit_v
 				best_impulse = v.magnitude - hit_v.magnitude
-				printh("impulse: " .. tostr(best_impulse))
+				-- printh("impulse: " .. tostr(best_impulse))
 				best_distance = hit_direction:length()
 			end
 		end
@@ -192,22 +192,34 @@ function notsolid(p)
 end
 
 function castbeam(v, size, d, max_d)
+	local hit
 	for i = 0, max_d, v.magnitude:length() do
 		if notsolid(v.point) and notsolid(v.point + size) then
 			v.point += v.magnitude
 			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 6)
 		else
+			-- printh("beam hit:" .. tostr(v.point))
 			-- Do wall backoff here
 			v.point.x -= v.magnitude.x / 8
 			v.point.y -= v.magnitude.y / 8
-			printh("beam hit:" .. tostr(v.point))
+			-- printh("beam backoff:" .. tostr(v.point))
 			line(v.point.x, v.point.y, v.point.x + size.x, v.point.y + size.y, 11)
 			return v.point
 		end
 	end
 end
 
+errorshown = false
+
 function player:update()
+	if self.x < 64 then
+		if not errorshown then
+			printh("OOB at " .. tostr(self.x, 1) .. "," .. tostr(self.y, 1))
+			errorshown = true
+		end
+		return
+	end
+	printh("*** player:update() ***")
 	-- self.dx = sin(time() / 30) * 8
 	-- self.width = (sin(time()) + 1) * 4
 	-- self.height = (sin(time() + 0.25) + 1) * 4
@@ -271,11 +283,15 @@ function player:update()
 			-- break
 		until physics_vector.magnitude:length() < 0.25
 
-		self.x = flr(physics_vector.point.x)
-		self.y = flr(physics_vector.point.y)
+		self.x = flr(physics_vector.point.x + 0)
+		self.y = flr(physics_vector.point.y + 0)
 
-		self.dx -= impulse.x
-		self.dy -= impulse.y
+		if self.x < 64 then
+			printh("vector" .. tostr(physics_vector.point) .. " after flr()" .. flr(physics_vector.point.x))
+		end
+
+		self.dx -= flr(impulse.x)
+		self.dy -= flr(impulse.y)
 	else
 		self.dx = 0
 		self.dy = 0
@@ -285,6 +301,17 @@ function player:update()
 end
 
 function player:draw()
-	spr(2, self.x, self.y, 1, 1, self.h_flip)
-	circ(self.x + self.dx, self.y + self.dy, 2, 14)
+	-- spr(2, self.x, self.y, 1, 1, self.h_flip)
+	-- circ(self.x + self.dx, self.y + self.dy, 2, 14)
 end
+
+-- INFO: *** player:update() ***
+-- INFO: x:64 y:64
+-- INFO: dir:{-0.25, 5}|5.0062
+-- INFO: beam hit:{63.7505, 119}
+-- INFO: hdir:{-0.2495, 5}|0x0005.0197
+-- INFO: impulse: {-0.2495, 5}
+-- INFO: {-0.0005, 0}
+-- INFO: {63.7505, 114}
+-- INFO: vector{63.7505, 114} after flr()63
+-- INFO: OOB at 0x003f.0000,0x0072.0000
